@@ -28,36 +28,35 @@ class NotificationService {
     _setupNotifications();
   }
 
-  _setupNotifications() async {
+  Future<void> _setupNotifications() async {
     await _setupTimezone();
     await _initializeNotifications();
   }
 
-  _setupTimezone() async {
+  Future<void> _setupTimezone() async {
     tz.initializeTimeZones();
     final String timeZoneName = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(timeZoneName));
   }
 
-  _initializeNotifications() async {
+  Future<void> _initializeNotifications() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     await localNotificationsPlugin.initialize(
       const InitializationSettings(android: android),
       // onSelectNotification: _onSelectNotification
-      onDidReceiveBackgroundNotificationResponse: (details) {
-        print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-        print(details);
-        _onSelectNotification(details.payload);
-      },
-      onDidReceiveNotificationResponse: (details) {
-        print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-        print(details);
-        _onSelectNotification(details.payload);
-      },
+      onDidReceiveNotificationResponse: _onSelectNotification,
+      // onDidReceiveNotificationResponse: (details) {
+      //   _onSelectNotification(details.payload);
+      // },
     );
+    await localNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestPermission();
   }
 
-  void _onSelectNotification(String? payload) {
+  static void _onSelectNotification(NotificationResponse? details) {
+    String? payload = details?.payload;
+    print(payload);
     if (payload != null && payload.isNotEmpty) {
       Navigator.of(Routes.navigatorKey!.currentContext!).pushReplacementNamed(payload);
     }
@@ -85,7 +84,7 @@ class NotificationService {
   checkForNotifications() async {
     final details = await localNotificationsPlugin.getNotificationAppLaunchDetails();
     if (details != null && details.didNotificationLaunchApp) {
-      _onSelectNotification(details.notificationResponse?.payload);
+      _onSelectNotification(details.notificationResponse);
     }
   }
 }
